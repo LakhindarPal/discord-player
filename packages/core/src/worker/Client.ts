@@ -1,4 +1,5 @@
-import { joinVoiceChannel } from "@discordjs/voice";
+import { joinVoiceChannel, VoiceConnection } from "@discordjs/voice";
+import { WorkerOp } from "../utils/enums";
 import { notify } from "./notifier";
 
 export interface SubscriptionPayload {
@@ -8,23 +9,24 @@ export interface SubscriptionPayload {
 }
 
 export class SubscriptionClient {
+    public voiceConnection!: VoiceConnection;
+    public constructor(public id: string) {}
+
     public connect(config: SubscriptionPayload) {
-        joinVoiceChannel({
+        this.voiceConnection = joinVoiceChannel({
             channelId: config.clientId,
             guildId: config.guildId,
             selfDeaf: Boolean(config.deafen),
-            adapterCreator: (options) => {
+            adapterCreator: () => {
                 return {
                     sendPayload(payload) {
                         notify({
-                            op: 'VOICE_STATE_UPDATE',
+                            op: WorkerOp.VOICE_STATE_UPDATE,
                             d: payload
                         });
                         return true;
                     },
-                    destroy() {
-                        
-                    },
+                    destroy() {}
                 };
             }
         });

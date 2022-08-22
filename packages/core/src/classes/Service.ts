@@ -1,4 +1,3 @@
-import type { Tinypool } from "tinypool";
 import { WorkerOp } from "../utils/enums";
 
 export interface ServicePayload {
@@ -7,7 +6,7 @@ export interface ServicePayload {
 }
 
 export class Service {
-    public constructor(public pool: Tinypool) {}
+    public constructor(public pool: any) {}
 
     public async send(payload: ServicePayload) {
         return await this.pool.run(payload);

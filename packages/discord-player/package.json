@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@discord-player/utils": "^0.1.0",
+    "discord-api-types": "^0.37.4",
     "tsup": "^6.2.2"
   },
   "devDependencies": {

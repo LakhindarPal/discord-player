@@ -33,7 +33,6 @@
     "@discord-player/utils": "^0.1.0",
     "@discordjs/voice": "^0.11.0",
     "discord-api-types": "^0.37.2",
-    "tinypool": "^0.2.4",
     "tsup": "^6.2.2"
   },
   "devDependencies": {
