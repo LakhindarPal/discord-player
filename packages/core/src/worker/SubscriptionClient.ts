@@ -1,6 +1,7 @@
 import { Collection } from "@discord-player/utils";
 import { DiscordGatewayAdapterLibraryMethods, joinVoiceChannel, VoiceConnection } from "@discordjs/voice";
 import { WorkerEvents } from "../utils/enums";
+import { AudioNode } from "./AudioNode";
 import { notify } from "./notifier";
 
 export interface SubscriptionPayload {
@@ -10,7 +11,7 @@ export interface SubscriptionPayload {
 }
 
 export class SubscriptionClient {
-    public connections = new Collection<string, VoiceConnection>();
+    public subscriptions = new Collection<string, AudioNode>();
     public adapters = new Collection<string, DiscordGatewayAdapterLibraryMethods>();
     public constructor(public clientId: string) {}
 
@@ -31,7 +32,7 @@ export class SubscriptionClient {
                     },
                     destroy: () => {
                         this.adapters.delete(config.guildId);
-                        this.connections.delete(config.guildId);
+                        this.subscriptions.delete(config.guildId);
                         notify({
                             t: WorkerEvents.CONNECTION_DESTROY,
                             d: {
@@ -45,21 +46,21 @@ export class SubscriptionClient {
             }
         });
 
-        this.connections.set(voiceConnection.joinConfig.guildId, voiceConnection);
+        this.subscriptions.set(voiceConnection.joinConfig.guildId, new AudioNode(voiceConnection, this.clientId));
     }
 
     public disconnect(config: Pick<SubscriptionPayload, "guildId">) {
-        const connection = this.connections.get(config.guildId);
-        if (connection) {
-            connection.destroy();
-            this.connections.delete(config.guildId);
+        const node = this.subscriptions.get(config.guildId);
+        if (node) {
+            node.connection.destroy();
+            this.subscriptions.delete(config.guildId);
         }
     }
 
     public disconnectAll() {
-        for (const [id, connection] of this.connections) {
-            connection.destroy();
-            this.connections.delete(id);
+        for (const [id, node] of this.subscriptions) {
+            node.connection.destroy();
+            this.subscriptions.delete(id);
         }
     }
 }

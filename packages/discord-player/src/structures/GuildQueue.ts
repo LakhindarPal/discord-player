@@ -22,6 +22,10 @@ export class GuildQueue {
         this.player.debug(`GuildQueue initialized for ${this.id} using ${this.tracks.strategy} strategy`, this.constructor.name);
     }
 
+    public connect(channel: string, deaf = true) {
+        return this.join(channel, deaf);
+    }
+
     public join(channel: string, deaf = true) {
         this.node.send({
             op: WorkerOp.JOIN_VOICE_CHANNEL,
@@ -30,6 +34,17 @@ export class GuildQueue {
                 guild_id: this.options.guildId,
                 channel_id: channel,
                 self_deaf: deaf
+            }
+        });
+    }
+
+    public play(query: string) {
+        this.node.send({
+            op: WorkerOp.PLAY,
+            d: {
+                client_id: this.options.clientId,
+                guild_id: this.options.guildId,
+                query
             }
         });
     }

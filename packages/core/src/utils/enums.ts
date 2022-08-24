@@ -5,7 +5,8 @@ export const WorkerOp = keyMirror([
     "JOIN_VOICE_CHANNEL",
     "CREATE_SUBSCRIPTION",
     "DELETE_SUBSCRIPTION",
-    "GATEWAY_PAYLOAD"
+    "GATEWAY_PAYLOAD",
+    "PLAY"
 ]);
 
 // prettier-ignore
