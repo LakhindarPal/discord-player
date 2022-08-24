@@ -1,11 +1,18 @@
-export function keyMirror<K extends string>(data: K[]) {
-    const obj = {} as Record<K, K>;
+import { keyMirror } from "@discord-player/utils";
 
-    for (const item of data) obj[item] = item;
+// prettier-ignore
+export const WorkerOp = keyMirror([
+    "JOIN_VOICE_CHANNEL",
+    "CREATE_SUBSCRIPTION",
+    "DELETE_SUBSCRIPTION",
+    "GATEWAY_PAYLOAD"
+]);
 
-    return obj;
-}
-
-export const WorkerOp = keyMirror(["JOIN_VOICE_CHANNEL", "CREATE_SUBSCRIPTION", "DELETE_SUBSCRIPTION", "GATEWAY_PAYLOAD"]);
-
-export const WorkerEvents = keyMirror(["SUBSCRIPTION_CREATE", "SUBSCRIPTION_DELETE", "VOICE_STATE_UPDATE", "ERROR", "CONNECTION_DESTROY"]);
+// prettier-ignore
+export const WorkerEvents = keyMirror([
+    "SUBSCRIPTION_CREATE",
+    "SUBSCRIPTION_DELETE",
+    "VOICE_STATE_UPDATE",
+    "ERROR",
+    "CONNECTION_DESTROY"
+]);
