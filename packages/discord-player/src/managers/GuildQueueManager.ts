@@ -1,3 +1,4 @@
+import { WorkerOp } from "@discord-player/core";
 import { Collection } from "@discord-player/utils";
 import { Player } from "../Player";
 import { GuildQueue, GuildQueueInit } from "../structures/GuildQueue";
@@ -10,9 +11,17 @@ export class GuildQueueManager {
 
     public async create(options: Omit<GuildQueueInit, "node">) {
         if (this.cache.has(options.guildId)) return this.cache.get(options.guildId);
+        this.player.debug(`Creating GuildQueue for guild ${options.guildId}\n\n${JSON.stringify(options)}`, this.constructor.name);
         const queue = new GuildQueue(this.player, {
             ...options,
             node: await this.player.nodes.spawn()
+        });
+        queue.node.send({
+            op: WorkerOp.CREATE_SUBSCRIPTION,
+            d: {
+                client_id: options.clientId,
+                guild_id: options.guildId
+            }
         });
         this.cache.set(options.guildId, queue);
         return queue;

@@ -10,5 +10,6 @@ export default defineConfig({
     entry: ["./src"],
     skipNodeModulesBundle: true,
     sourcemap: true,
-    target: "ES2020"
+    target: "ES2020",
+    silent: true
 });

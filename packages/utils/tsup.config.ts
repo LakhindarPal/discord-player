@@ -7,8 +7,9 @@ export default defineConfig({
     format: ["cjs", "esm"],
     keepNames: true,
     minify: false,
-    entry: ["./src/index.ts"],
+    entry: ["./src"],
     skipNodeModulesBundle: true,
     sourcemap: true,
-    target: "ES2020"
+    target: "ES2020",
+    silent: true
 });
