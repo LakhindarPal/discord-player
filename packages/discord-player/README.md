@@ -6,6 +6,7 @@ A complete framework to simplify the implementation of music commands for Discor
 
 ```ts
 import { Player } from "discord-player";
+import { resolve } from "node:path";
 
 // a client can be any discord client (discord.js, eris, etc.)
 const client = getDiscordClientSomehow();
@@ -23,7 +24,7 @@ client.ws.on("VOICE_STATE_UPDATE", (data) => {
     player.onServerUpdate({ t: "VOICE_STATE_UPDATE", d: data });
 });
 
-client.onCommand("join", async (ctx) => {
+client.onCommand("play", async (ctx) => {
     const voiceChannel = ctx.member.voice.channel;
     if (!voiceChannel) return ctx.reply("You are not in a voice channel!");
     const queue = await player.queues.create({
@@ -31,5 +32,8 @@ client.onCommand("join", async (ctx) => {
         guildId: ctx.guild.id
     });
     queue.join(voiceChannel.id);
+
+    const audio = resolve("./stream.mp3");
+    queue.play(audio);
 });
 ```
