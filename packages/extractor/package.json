@@ -1,0 +1,35 @@
+{
+  "name": "@discord-player/extractor",
+  "version": "0.1.0",
+  "description": "Discord Player extractor",
+  "keywords": [
+    "discord-player"
+  ],
+  "author": "DevAndromeda <46562212+DevAndromeda@users.noreply.github.com>",
+  "homepage": "https://discord-player.js.org",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "directories": {
+    "src": "src"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Androz2091/discord-player.git"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "prepublish": "tsup"
+  },
+  "bugs": {
+    "url": "https://github.com/Androz2091/discord-player/issues"
+  },
+  "dependencies": {
+    "tsup": "^6.2.2"
+  },
+  "devDependencies": {
+    "@discord-player/tsconfig": "^0.0.0"
+  }
+}
