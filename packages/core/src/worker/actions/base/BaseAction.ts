@@ -1,8 +1,8 @@
-import { ServicePayload, WorkerPayload } from "../../../classes/PlayerNodeManager";
-import { clients } from "../../../utils/clients";
-import { WorkerOp } from "../../../utils/enums";
-import { notify } from "../../notifier";
-import { SubscriptionClient } from "../../SubscriptionClient";
+import { ServicePayload, WorkerPayload } from '../../../classes/PlayerNodeManager';
+import { clients } from '../../../utils/clients';
+import { WorkerOp } from '../../../utils/enums';
+import { notify } from '../../notifier';
+import { SubscriptionClient } from '../../SubscriptionClient';
 
 export class BaseAction {
     public clients = clients;

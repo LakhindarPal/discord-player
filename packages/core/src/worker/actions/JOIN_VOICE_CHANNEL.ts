@@ -1,6 +1,6 @@
-import { ServicePayload } from "../../classes/PlayerNodeManager";
-import { WorkerOp } from "../../utils/enums";
-import { BaseAction } from "./base/BaseAction";
+import { ServicePayload } from '../../classes/PlayerNodeManager';
+import { WorkerOp } from '../../utils/enums';
+import { BaseAction } from './base/BaseAction';
 
 export interface JoinPayload {
     channel_id: string;

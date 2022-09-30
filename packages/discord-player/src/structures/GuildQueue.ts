@@ -1,9 +1,10 @@
-import { Queue, QueueStrategy } from "@discord-player/utils";
-import { Player } from "../Player";
-import { AudioTrack } from "./AudioTrack";
-import { Worker } from "node:worker_threads";
-import { GuildQueueNodeWrapper } from "./GuildQueueNodeWrapper";
-import { WorkerOp } from "@discord-player/core";
+import { Dispatcher } from './Dispatcher';
+import { Queue, QueueStrategy } from '@discord-player/utils';
+import { Player } from '../Player';
+import { AudioTrack } from './AudioTrack';
+import { Worker } from 'node:worker_threads';
+import { GuildQueueNodeWrapper } from './GuildQueueNodeWrapper';
+import { WorkerOp } from '@discord-player/core';
 
 export interface GuildQueueInit {
     strategy?: QueueStrategy;
@@ -16,8 +17,9 @@ export class GuildQueue {
     public tracks: Queue<AudioTrack>;
     public node: GuildQueueNodeWrapper;
     public createdAt = new Date();
+    public readonly dispatcher = new Dispatcher(this);
     public constructor(public player: Player, public options: GuildQueueInit) {
-        this.tracks = new Queue<AudioTrack>(this.options.strategy ?? "FIFO");
+        this.tracks = new Queue<AudioTrack>(this.options.strategy ?? 'FIFO');
         this.node = new GuildQueueNodeWrapper(this, this.options.node);
         this.player.debug(`GuildQueue initialized for ${this.id} using ${this.tracks.strategy} strategy`, this.constructor.name);
     }
@@ -38,22 +40,15 @@ export class GuildQueue {
         });
     }
 
-    public play(query: string) {
-        this.node.send({
-            op: WorkerOp.PLAY,
-            d: {
-                client_id: this.options.clientId,
-                guild_id: this.options.guildId,
-                query
-            }
-        });
-    }
-
     public get createdTimestamp() {
         return this.createdAt.getTime();
     }
 
     public get id() {
         return this.options.guildId;
+    }
+
+    public get client() {
+        return this.options.clientId;
     }
 }

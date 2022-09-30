@@ -1,11 +1,11 @@
-import { cpus } from "node:os";
-import { Worker } from "node:worker_threads";
-import { join } from "node:path";
-import { Collection, EventEmitter } from "@discord-player/utils";
-import { WorkerEvents, WorkerOp } from "../utils/enums";
+import { cpus } from 'node:os';
+import { Worker } from 'node:worker_threads';
+import { join } from 'node:path';
+import { Collection, EventEmitter } from '@discord-player/utils';
+import { WorkerEvents, WorkerOp } from '../utils/enums';
 
 interface PlayerNodeConfig {
-    max?: number | "auto";
+    max?: number | 'auto';
     respawn?: boolean;
 }
 
@@ -46,13 +46,13 @@ export class PlayerNodeManager extends EventEmitter<PlayerNodeEvents> {
     }
 
     #debug(message: string) {
-        this.emit("debug", `[${this.constructor.name} | ${new Date().toLocaleString()}] ${message}`);
+        this.emit('debug', `[${this.constructor.name} | ${new Date().toLocaleString()}] ${message}`);
     }
 
     public get maxThreads() {
         const conf = this.config.max;
-        if (conf === "auto") return cpus().length;
-        if (typeof conf !== "number" || Number.isNaN(conf) || conf < 1 || !Number.isFinite(conf)) return 1;
+        if (conf === 'auto') return cpus().length;
+        if (typeof conf !== 'number' || Number.isNaN(conf) || conf < 1 || !Number.isFinite(conf)) return 1;
         return conf;
     }
 
@@ -65,7 +65,7 @@ export class PlayerNodeManager extends EventEmitter<PlayerNodeEvents> {
 
     public send(workerRes: WorkerResolvable, data: ServicePayload) {
         const worker = this.resolveWorker(workerRes);
-        if (!worker) throw new Error("Worker does not exist");
+        if (!worker) throw new Error('Worker does not exist');
         this.#debug(`Sending ${JSON.stringify(data)} to thread ${worker.threadId}`);
         worker.postMessage(data);
     }
@@ -74,51 +74,51 @@ export class PlayerNodeManager extends EventEmitter<PlayerNodeEvents> {
         return new Promise<Worker>((resolve) => {
             if (!this.spawnable) return resolve(this.workers.random()!);
 
-            const worker = new Worker(join(__dirname, "..", "worker", "worker.js"));
+            const worker = new Worker(join(__dirname, '..', 'worker', 'worker.js'));
             this.#debug(`Spawned worker at thread ${worker.threadId}`);
 
-            worker.on("online", () => {
+            worker.on('online', () => {
                 this.#debug(`worker ${worker.threadId} is online`);
                 this.workers.set(worker.threadId, worker);
-                this.emit("spawn", worker);
+                this.emit('spawn', worker);
                 return resolve(worker);
             });
 
-            worker.on("message", (message: WorkerPayload) => {
+            worker.on('message', (message: WorkerPayload) => {
                 this.#debug(`Incoming message from worker ${worker.threadId}\n\n${JSON.stringify(message)}`);
                 switch (message.t) {
                     case WorkerEvents.VOICE_STATE_UPDATE: {
-                        return this.emit("voiceStateUpdate", worker, message.d);
+                        return this.emit('voiceStateUpdate', worker, message.d);
                     }
                     case WorkerEvents.ERROR: {
-                        return this.emit("error", worker, new Error((message.d as any).message));
+                        return this.emit('error', worker, new Error((message.d as any).message));
                     }
                     case WorkerEvents.SUBSCRIPTION_CREATE: {
-                        return this.emit("subscriptionCreate", worker, message.d as BasicSubscription);
+                        return this.emit('subscriptionCreate', worker, message.d as BasicSubscription);
                     }
                     case WorkerEvents.SUBSCRIPTION_DELETE: {
-                        return this.emit("subscriptionDelete", worker, message.d as BasicSubscription);
+                        return this.emit('subscriptionDelete', worker, message.d as BasicSubscription);
                     }
                     default: {
-                        return this.emit("message", worker, message);
+                        return this.emit('message', worker, message);
                     }
                 }
             });
 
-            worker.on("exit", () => {
+            worker.on('exit', () => {
                 this.#debug(`Worker terminated at thread ${worker.threadId}`);
                 this.workers.delete(worker.threadId);
             });
 
-            worker.on("error", (error) => {
+            worker.on('error', (error) => {
                 this.#debug(`Incoming error message from worker ${worker.threadId}\n\n${JSON.stringify(error)}`);
-                this.emit("error", worker, error);
+                this.emit('error', worker, error);
             });
         });
     }
 
     public resolveWorker(worker: WorkerResolvable) {
-        if (typeof worker === "number") return this.workers.get(worker);
+        if (typeof worker === 'number') return this.workers.get(worker);
         return this.workers.find((res) => res.threadId === worker.threadId);
     }
 

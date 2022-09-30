@@ -10,7 +10,7 @@ export interface RawAudioTrack<T = unknown> {
 
 export class AudioTrack<T = unknown> {
     public constructor(public data: RawAudioTrack<T>) {
-        Object.defineProperty(this, "data", {
+        Object.defineProperty(this, 'data', {
             enumerable: false,
             writable: true,
             configurable: true

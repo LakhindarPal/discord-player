@@ -1,4 +1,4 @@
-import { keyMirror } from "@discord-player/utils";
+import { keyMirror } from '@discord-player/utils';
 
 // prettier-ignore
 export const WorkerOp = keyMirror([

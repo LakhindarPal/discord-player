@@ -1,6 +1,6 @@
-import { ServicePayload } from "@discord-player/core";
-import { Worker } from "node:worker_threads";
-import { GuildQueue } from "./GuildQueue";
+import { ServicePayload } from '@discord-player/core';
+import { Worker } from 'node:worker_threads';
+import { GuildQueue } from './GuildQueue';
 
 export class GuildQueueNodeWrapper {
     public constructor(public queue: GuildQueue, public internalNode: Worker) {}

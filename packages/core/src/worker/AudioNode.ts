@@ -1,4 +1,4 @@
-import { createAudioPlayer, createAudioResource, StreamType, VoiceConnection } from "@discordjs/voice";
+import { createAudioPlayer, createAudioResource, StreamType, VoiceConnection } from '@discordjs/voice';
 
 export interface NodePlayerOptions {
     query: string;
@@ -23,11 +23,11 @@ export class AudioNode {
     public play(options: NodePlayerOptions) {
         const resource = createAudioResource(options.query, {
             inputType: StreamType.Arbitrary,
-            inlineVolume: typeof options.initialVolume === "number",
+            inlineVolume: typeof options.initialVolume === 'number',
             metadata: options.metadata
         });
 
-        if ("initialVolume" in options && resource.volume) {
+        if ('initialVolume' in options && resource.volume) {
             resource.volume.setVolumeLogarithmic(options.initialVolume!);
         }
 

@@ -1,8 +1,8 @@
-import { EventEmitter } from "@discord-player/utils";
-import { GatewayVoiceServerUpdateDispatch, GatewayVoiceStateUpdate, GatewayVoiceStateUpdateDispatch } from "discord-api-types/v10";
-import { GuildQueueManager } from "./managers/GuildQueueManager";
-import { PlayerNodeManager, WorkerOp } from "@discord-player/core";
-import { GuildQueue } from "./structures/GuildQueue";
+import { EventEmitter } from '@discord-player/utils';
+import { GatewayVoiceServerUpdateDispatch, GatewayVoiceStateUpdate, GatewayVoiceStateUpdateDispatch } from 'discord-api-types/v10';
+import { GuildQueueManager } from './managers/GuildQueueManager';
+import { PlayerNodeManager, WorkerOp } from '@discord-player/core';
+import { GuildQueue } from './structures/GuildQueue';
 
 export interface PlayerEvents {
     error: (error: Error) => Awaited<void>;
@@ -15,11 +15,11 @@ export interface PlayerEvents {
 export type PlayerPayloadSender = (guildId: string, payload: GatewayVoiceStateUpdate) => Awaited<void>;
 
 export interface PlayerInit {
-    maxThreads?: number | "auto";
+    maxThreads?: number | 'auto';
 }
 
 export class Player extends EventEmitter<PlayerEvents> {
-    public requiredEvents: Array<keyof PlayerEvents> = ["error"];
+    public requiredEvents: Array<keyof PlayerEvents> = ['error'];
     public queues = new GuildQueueManager(this);
     public nodes: PlayerNodeManager;
     public constructor(public options?: PlayerInit) {
@@ -35,32 +35,32 @@ export class Player extends EventEmitter<PlayerEvents> {
                     NodeMaxThreads: this.options?.maxThreads ?? 1
                 },
                 null,
-                "  "
+                '  '
             )}`
         );
     }
 
     #eventDispatcherInit() {
-        this.debug("Registering event dispatcher");
-        this.nodes.on("voiceStateUpdate", (_, payload: GatewayVoiceStateUpdate) => {
-            this.emit("payload", payload.d.guild_id, payload);
+        this.debug('Registering event dispatcher');
+        this.nodes.on('voiceStateUpdate', (_, payload: GatewayVoiceStateUpdate) => {
+            this.emit('payload', payload.d.guild_id, payload);
         });
-        this.nodes.on("debug", (message) => {
-            this.emit("debug", message);
+        this.nodes.on('debug', (message) => {
+            this.emit('debug', message);
         });
-        this.nodes.on("error", (worker, error) => {
-            this.emit("error", error);
+        this.nodes.on('error', (worker, error) => {
+            this.emit('error', error);
         });
-        this.nodes.on("subscriptionCreate", (worker, payload) => {
+        this.nodes.on('subscriptionCreate', (worker, payload) => {
             const queue = this.queues.cache.get(payload.guild_id);
             if (queue) {
-                this.emit("subscriptionCreate", queue);
+                this.emit('subscriptionCreate', queue);
             }
         });
-        this.nodes.on("subscriptionDelete", (worker, payload) => {
+        this.nodes.on('subscriptionDelete', (worker, payload) => {
             const queue = this.queues.cache.get(payload.guild_id);
             if (queue) {
-                this.emit("subscriptionDelete", queue);
+                this.emit('subscriptionDelete', queue);
             }
         });
     }
@@ -78,12 +78,12 @@ export class Player extends EventEmitter<PlayerEvents> {
     }
 
     public debug(message: string, className = this.constructor.name) {
-        this.emit("debug", `[${className} | ${new Date().toLocaleString()}] ${message}`);
+        this.emit('debug', `[${className} | ${new Date().toLocaleString()}] ${message}`);
     }
 
     public emit<K extends keyof PlayerEvents>(event: K, ...args: Parameters<PlayerEvents[K]>): boolean {
         if (this.isImportantEvent(event) && !this.hasEventListener(event)) {
-            process.emitWarning(`[${this.constructor.name}Warning] No event listeners found for ${event}. ${this.requiredEvents.join(", ")} must have event listeners!\n${args.join("\n")}`);
+            process.emitWarning(`[${this.constructor.name}Warning] No event listeners found for ${event}. ${this.requiredEvents.join(', ')} must have event listeners!\n${args.join('\n')}`);
             return false;
         }
         return super.emit(event, ...args);

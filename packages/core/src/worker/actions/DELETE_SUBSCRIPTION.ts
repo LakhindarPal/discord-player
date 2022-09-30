@@ -1,6 +1,6 @@
-import { ServicePayload } from "../../classes/PlayerNodeManager";
-import { WorkerEvents, WorkerOp } from "../../utils/enums";
-import { BaseAction } from "./base/BaseAction";
+import { ServicePayload } from '../../classes/PlayerNodeManager';
+import { WorkerEvents, WorkerOp } from '../../utils/enums';
+import { BaseAction } from './base/BaseAction';
 
 class DeleteSubscription extends BaseAction {
     public actionName = WorkerOp.DELETE_SUBSCRIPTION;

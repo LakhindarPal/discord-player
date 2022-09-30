@@ -1,34 +1,34 @@
-export type QueueStrategy = "LIFO" | "FIFO";
+export type QueueStrategy = 'LIFO' | 'FIFO';
 
 export type QueueItemFilter<T> = (value: T, idx: number, array: T[]) => boolean;
 
 export class Queue<T = unknown> {
     public store: T[];
-    public constructor(public strategy: QueueStrategy = "FIFO", initializer: T[] = []) {
-        if (!["FIFO", "LIFO"].includes(strategy)) throw new TypeError(`Invalid queue strategy "${strategy}"!`);
+    public constructor(public strategy: QueueStrategy = 'FIFO', initializer: T[] = []) {
+        if (!['FIFO', 'LIFO'].includes(strategy)) throw new TypeError(`Invalid queue strategy "${strategy}"!`);
         this.store = Array.isArray(initializer) ? initializer : [];
 
-        Object.defineProperty(this, "store", {
+        Object.defineProperty(this, 'store', {
             writable: true,
             configurable: true,
             enumerable: false
         });
     }
 
-    public static from<T>(data: T[], strategy: QueueStrategy = "FIFO") {
+    public static from<T>(data: T[], strategy: QueueStrategy = 'FIFO') {
         return new Queue<T>(strategy, data);
     }
 
     public isFIFO() {
-        return this.strategy === "FIFO";
+        return this.strategy === 'FIFO';
     }
 
     public isLIFO() {
-        return this.strategy === "LIFO";
+        return this.strategy === 'LIFO';
     }
 
     public add(item: T | T[]) {
-        if (this.strategy === "FIFO") {
+        if (this.strategy === 'FIFO') {
             if (Array.isArray(item)) {
                 this.store.push(...item);
             } else {
@@ -87,11 +87,11 @@ export class Queue<T = unknown> {
 
     public at(idx: number) {
         const arr = this.toArray();
-        return typeof Array.prototype.at === "function" ? arr.at(idx) : arr[idx];
+        return typeof Array.prototype.at === 'function' ? arr.at(idx) : arr[idx];
     }
 
     public dispatch() {
-        const dispatchBeginning = this.strategy === "FIFO";
+        const dispatchBeginning = this.strategy === 'FIFO';
         return dispatchBeginning ? this.store.shift() : this.store.pop();
     }
 
@@ -108,7 +108,7 @@ export class Queue<T = unknown> {
     }
 
     public toArray() {
-        return this.strategy === "FIFO" ? this.store.slice() : this.store.slice().reverse();
+        return this.strategy === 'FIFO' ? this.store.slice() : this.store.slice().reverse();
     }
 
     public toJSON() {

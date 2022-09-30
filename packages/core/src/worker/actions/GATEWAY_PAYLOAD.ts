@@ -1,7 +1,7 @@
-import { ServicePayload } from "../../classes/PlayerNodeManager";
-import { WorkerOp } from "../../utils/enums";
-import { BaseAction } from "./base/BaseAction";
-import { GatewayDispatchEvents } from "discord-api-types/v10";
+import { ServicePayload } from '../../classes/PlayerNodeManager';
+import { WorkerOp } from '../../utils/enums';
+import { BaseAction } from './base/BaseAction';
+import { GatewayDispatchEvents } from 'discord-api-types/v10';
 
 class JoinVoiceChannel extends BaseAction {
     public actionName = WorkerOp.GATEWAY_PAYLOAD;

@@ -1,8 +1,8 @@
-import { Collection } from "@discord-player/utils";
-import { DiscordGatewayAdapterLibraryMethods, joinVoiceChannel, VoiceConnection } from "@discordjs/voice";
-import { WorkerEvents } from "../utils/enums";
-import { AudioNode } from "./AudioNode";
-import { notify } from "./notifier";
+import { Collection } from '@discord-player/utils';
+import { DiscordGatewayAdapterLibraryMethods, joinVoiceChannel, VoiceConnection } from '@discordjs/voice';
+import { WorkerEvents } from '../utils/enums';
+import { AudioNode } from './AudioNode';
+import { notify } from './notifier';
 
 export interface SubscriptionPayload {
     channelId: string;
@@ -49,7 +49,7 @@ export class SubscriptionClient {
         this.subscriptions.set(voiceConnection.joinConfig.guildId, new AudioNode(voiceConnection, this.clientId));
     }
 
-    public disconnect(config: Pick<SubscriptionPayload, "guildId">) {
+    public disconnect(config: Pick<SubscriptionPayload, 'guildId'>) {
         const node = this.subscriptions.get(config.guildId);
         if (node) {
             node.connection.destroy();

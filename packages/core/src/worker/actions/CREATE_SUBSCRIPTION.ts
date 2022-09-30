@@ -1,7 +1,7 @@
-import { ServicePayload } from "../../classes/PlayerNodeManager";
-import { WorkerEvents, WorkerOp } from "../../utils/enums";
-import { SubscriptionClient } from "../SubscriptionClient";
-import { BaseAction } from "./base/BaseAction";
+import { ServicePayload } from '../../classes/PlayerNodeManager';
+import { WorkerEvents, WorkerOp } from '../../utils/enums';
+import { SubscriptionClient } from '../SubscriptionClient';
+import { BaseAction } from './base/BaseAction';
 
 class CreateSubscription extends BaseAction {
     public actionName = WorkerOp.CREATE_SUBSCRIPTION;
