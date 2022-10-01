@@ -27,10 +27,10 @@
     "url": "https://github.com/Androz2091/discord-player/issues"
   },
   "dependencies": {
-    "@discordjs/collection": "^1.1.0",
-    "tsup": "^6.2.2"
+    "@discordjs/collection": "^1.1.0"
   },
   "devDependencies": {
-    "@discord-player/tsconfig": "^0.0.0"
+    "@discord-player/tsconfig": "^0.0.0",
+    "tsup": "^6.2.2"
   }
 }

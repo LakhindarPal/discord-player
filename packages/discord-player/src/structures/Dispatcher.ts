@@ -2,7 +2,7 @@ import { WorkerOp } from '@discord-player/core';
 import { GuildQueue } from './GuildQueue';
 
 export class Dispatcher {
-    public constructor(public readonly queue: GuildQueue) { }
+    public constructor(public readonly queue: GuildQueue) {}
 
     public get node() {
         return this.queue.node;

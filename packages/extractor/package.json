@@ -27,9 +27,12 @@
     "url": "https://github.com/Androz2091/discord-player/issues"
   },
   "dependencies": {
-    "tsup": "^6.2.2"
+    "youtube-sr": "^4.3.4",
+    "ytdl-core": "^4.11.2"
   },
   "devDependencies": {
-    "@discord-player/tsconfig": "^0.0.0"
+    "@discord-player/tsconfig": "^0.0.0",
+    "discord-player": "^6.0.0",
+    "tsup": "^6.2.2"
   }
 }

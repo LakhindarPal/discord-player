@@ -1,8 +1,9 @@
-import { EventEmitter } from '@discord-player/utils';
+import { Collection, EventEmitter } from '@discord-player/utils';
 import { GatewayVoiceServerUpdateDispatch, GatewayVoiceStateUpdate, GatewayVoiceStateUpdateDispatch } from 'discord-api-types/v10';
 import { GuildQueueManager } from './managers/GuildQueueManager';
 import { PlayerNodeManager, WorkerOp } from '@discord-player/core';
 import { GuildQueue } from './structures/GuildQueue';
+import { Extractor } from './structures/Extractor';
 
 export interface PlayerEvents {
     error: (error: Error) => Awaited<void>;
@@ -16,17 +17,22 @@ export type PlayerPayloadSender = (guildId: string, payload: GatewayVoiceStateUp
 
 export interface PlayerInit {
     maxThreads?: number | 'auto';
+    extractors?: Extractor[];
 }
+
+export interface PlayerSearchOptions {}
 
 export class Player extends EventEmitter<PlayerEvents> {
     public requiredEvents: Array<keyof PlayerEvents> = ['error'];
     public queues = new GuildQueueManager(this);
     public nodes: PlayerNodeManager;
+    public extractors = new Collection<string, Extractor>();
     public constructor(public options?: PlayerInit) {
         super();
         this.nodes = new PlayerNodeManager({
             max: this.options?.maxThreads
         });
+        if (this.options?.extractors?.length) this.registerExtractors(this.options.extractors);
         this.#eventDispatcherInit();
         this.debug(
             `Initialized Player instance:\n\nPlayerConfig ${JSON.stringify(
@@ -38,6 +44,14 @@ export class Player extends EventEmitter<PlayerEvents> {
                 '  '
             )}`
         );
+    }
+
+    public registerExtractors(extractors: Extractor[]) {
+        for (const extractor of extractors) {
+            if (this.extractors.has(extractor.name)) continue;
+            this.extractors.set(extractor.name, extractor);
+            this.debug(`Registered extractor ${extractor.name}`);
+        }
     }
 
     #eventDispatcherInit() {
@@ -95,5 +109,21 @@ export class Player extends EventEmitter<PlayerEvents> {
 
     public hasEventListener<K extends keyof PlayerEvents>(event: K) {
         return this.eventNames().some((ev) => ev === event);
+    }
+
+    public async search(query: string, options?: PlayerSearchOptions) {
+        for (const extractor of this.extractors.values()) {
+            if (!(await extractor.validate(query))) continue;
+
+            const result = await extractor.search(query);
+            if (result.tracks.length) {
+                return {
+                    tracks: result.tracks,
+                    extractor
+                };
+            }
+        }
+
+        return { tracks: [], extractor: null };
     }
 }

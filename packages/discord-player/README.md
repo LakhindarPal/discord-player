@@ -34,6 +34,6 @@ client.onCommand("play", async (ctx) => {
     queue.join(voiceChannel.id);
 
     const audio = resolve("./stream.mp3");
-    queue.play(audio);
+    queue.dispatcher.play(audio);
 });
 ```
