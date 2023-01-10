@@ -1,7 +1,7 @@
 {
-  "name": "discord-player",
-  "version": "6.0.0",
-  "description": "A complete framework to simplify the implementation of music commands for Discord bots",
+  "name": "@discord-player/biquad",
+  "version": "0.1.0",
+  "description": "Biquad filter implementation for Discord Player",
   "keywords": [
     "discord-player",
     "music",
@@ -35,11 +35,6 @@
   },
   "bugs": {
     "url": "https://github.com/Androz2091/discord-player/issues"
-  },
-  "dependencies": {
-    "@discord-player/core": "^0.1.0",
-    "@discord-player/utils": "^0.1.0",
-    "discord-api-types": "^0.37.4"
   },
   "devDependencies": {
     "@discord-player/tsconfig": "^0.0.0",
