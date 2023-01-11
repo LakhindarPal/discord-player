@@ -56,7 +56,10 @@ export class EqualizerStream extends Transform {
     }
 
     public getEQ() {
-        return this.bandMultipliers.slice();
+        return this.bandMultipliers.map((m, i) => ({
+            band: i,
+            gain: m
+        })) as EqualizerBand[];
     }
 
     public setEQ(bands: EqualizerBand[]) {
