@@ -5,13 +5,13 @@ interface EqualizerStreamOptions extends TransformOptions {
     bandMultiplier: EqualizerBand[];
 }
 
-interface EqualizerBand {
+export interface EqualizerBand {
     band: number;
     gain: number;
 }
 
 export class EqualizerStream extends Transform {
-    #disabled = false;
+    private _disabled = false;
     public bandMultipliers: number[] = new Array(Equalizer.BAND_COUNT).fill(0);
     public equalizer = new Equalizer(1, this.bandMultipliers);
     public constructor(options?: EqualizerStreamOptions) {
@@ -28,23 +28,23 @@ export class EqualizerStream extends Transform {
     }
 
     public get disabled() {
-        return this.#disabled;
+        return this._disabled;
     }
 
     public disable() {
-        this.#disabled = true;
+        this._disabled = true;
     }
 
     public enable() {
-        this.#disabled = false;
+        this._disabled = false;
     }
 
     public toggle() {
-        this.#disabled = !this.#disabled;
+        this._disabled = !this._disabled;
     }
 
     public _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
-        if (this.#disabled) {
+        if (this._disabled) {
             this.push(chunk);
             return callback();
         }
