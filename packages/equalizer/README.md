@@ -13,10 +13,10 @@ $ npm install --save @discord-player/equalizer
 #### Equalizer
 
 ```js
-import { EqualizerFilter } from '@discord-player/equalizer';
+import { EqualizerStream } from '@discord-player/equalizer';
 
 // initialize 15 band equalizer stream
-const equalizer = new EqualizerFilter.EqualizerStream();
+const equalizer = new EqualizerStream();
 
 // set equalizer bands, in this case add some bass
 equalizer.setEQ([
@@ -37,9 +37,7 @@ const output = input.pipe(equalizer);
 #### Biquad
 
 ```js
-import { Biquad, Frequency } from '@discord-player/equalizer';
-
-const { BiquadFilter, Coefficients, FilterType, Q_BUTTERWORTH } = Biquad;
+import { BiquadFilter, Coefficients, FilterType, Q_BUTTERWORTH, Frequency } from '@discord-player/equalizer';
 
 const f0 = new Frequency(10).hz();
 const fs = new Frequency(1).khz();

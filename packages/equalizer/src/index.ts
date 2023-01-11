@@ -1,3 +1,3 @@
-export * as Biquad from './biquad';
-export * as EqualizerFilter from './equalizer';
+export * from './biquad';
+export * from './equalizer';
 export * from './utils';

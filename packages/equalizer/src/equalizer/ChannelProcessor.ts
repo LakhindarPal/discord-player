@@ -6,7 +6,7 @@ export class ChannelProcessor {
     public current: number;
     public m1: number;
     public m2: number;
-    private _extremum = Math.pow(2, 16 - 1);
+    public _extremum = Math.pow(2, 16 - 1);
 
     public constructor(bandMultipliers: number[]) {
         this.history = new Array(Equalizer.BAND_COUNT * 6).fill(0);
@@ -36,7 +36,6 @@ export class ChannelProcessor {
                 result += bandResult * this.bandMultipliers[bandIndex];
             }
 
-            // const val = Math.min(Math.max(result * 4.0, -1.0), 1.0);
             const val = Math.min(this._extremum - 1, Math.max(-this._extremum, result * 4.0));
             samples.writeInt16LE(val, sampleIndex);
 
