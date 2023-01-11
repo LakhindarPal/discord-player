@@ -44,7 +44,7 @@ function getReadMe(name) {
     Discord Player ${name} library\n
     ## Installation\n
     \`\`\`sh
-    $ npm install ${name}
+    $ npm install --save ${name}
     \`\`\`\n
     ## Example\n
     \`\`\`js\n\`\`\`\n`;

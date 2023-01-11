@@ -1,9 +1,11 @@
 {
-  "name": "@discord-player/biquad",
+  "name": "@discord-player/equalizer",
   "version": "0.1.0",
-  "description": "Biquad filter implementation for Discord Player",
+  "description": "PCM Equalizer implementation for Discord Player",
   "keywords": [
     "discord-player",
+    "pcm",
+    "equalizer",
     "music",
     "bot",
     "discord.js",

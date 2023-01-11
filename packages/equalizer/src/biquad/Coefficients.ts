@@ -31,12 +31,14 @@ export class Coefficients {
     public b1: number = 0;
     public b2: number = 0;
 
-    public constructor(data: CoefficientsInit) {
-        this.a1 = data.a1;
-        this.a2 = data.a2;
-        this.b0 = data.b0;
-        this.b1 = data.b1;
-        this.b2 = data.b2;
+    public constructor(data?: CoefficientsInit) {
+        if (data) {
+            this.a1 = data.a1;
+            this.a2 = data.a2;
+            this.b0 = data.b0;
+            this.b1 = data.b1;
+            this.b2 = data.b2;
+        }
     }
 
     public static from(filter: FilterType, samplingFreq: number, cutoffFreq: number, Q: number, dbGain = 0) {
