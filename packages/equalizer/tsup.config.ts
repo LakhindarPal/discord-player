@@ -2,14 +2,14 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig({
     clean: true,
-    bundle: false,
+    bundle: true,
     dts: true,
     format: ['cjs', 'esm'],
     keepNames: true,
     minify: false,
-    entry: ['./src'],
+    entry: ['./src/index.ts'],
     skipNodeModulesBundle: true,
-    sourcemap: true,
+    sourcemap: false,
     target: 'ES2020',
     silent: true
 });
