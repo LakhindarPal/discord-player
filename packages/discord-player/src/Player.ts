@@ -1,11 +1,10 @@
 import { FFmpeg } from '@discord-player/ffmpeg';
-import { Client, SnowflakeUtil, VoiceState, IntentsBitField, User, GuildVoiceChannelResolvable, version as djsVersion } from 'discord.js';
+import { Client, SnowflakeUtil, VoiceState, User, GuildVoiceChannelResolvable, version as djsVersion } from 'discord.js';
 import { Playlist, Track, SearchResult } from './fabric';
 import { GuildQueueEvents, VoiceConnectConfig, GuildNodeCreateOptions, GuildNodeManager, GuildQueue, ResourcePlayOptions, GuildQueueEvent } from './manager';
 import { VoiceUtils } from './VoiceInterface/VoiceUtils';
 import { PlayerEvents, QueryType, SearchOptions, PlayerInitOptions, PlaylistInitData, SearchQueryType } from './types/types';
 import { QueryResolver } from './utils/QueryResolver';
-import { Util } from './utils/Util';
 import { generateDependencyReport, version as dVoiceVersion } from '@discordjs/voice';
 import { ExtractorExecutionContext } from './extractors/ExtractorExecutionContext';
 import { BaseExtractor } from './extractors/BaseExtractor';
@@ -14,6 +13,7 @@ import { QueryCache } from './utils/QueryCache';
 import { PlayerEventsEmitter } from './utils/PlayerEventsEmitter';
 import { Exceptions } from './errors';
 import { defaultVoiceStateHandler } from './DefaultVoiceStateHandler';
+import { DiscordClient, DiscordJsClient, isDJSClient } from './DiscordClient';
 
 const kSingleton = Symbol('InstanceDiscordPlayerSingleton');
 
@@ -35,6 +35,8 @@ export interface PlayerNodeInitializerOptions<T> extends SearchOptions {
 
 export type VoiceStateHandler = (player: Player, queue: GuildQueue, oldVoiceState: VoiceState, newVoiceState: VoiceState) => Awaited<void>;
 
+export type ClientLike = DiscordClient | DiscordJsClient | Client;
+
 export class Player extends PlayerEventsEmitter<PlayerEvents> {
     #lastLatency = -1;
     #voiceStateUpdateListener = this.handleVoiceState.bind(this);
@@ -44,7 +46,7 @@ export class Player extends PlayerEventsEmitter<PlayerEvents> {
     public static readonly version: string = '[VI]{{inject}}[/VI]';
     public static _singletonKey = kSingleton;
     public readonly id = SnowflakeUtil.generate().toString();
-    public readonly client!: Client;
+    public readonly client!: DiscordClient;
     public readonly options!: PlayerInitOptions;
     public nodes = new GuildNodeManager(this);
     public readonly voiceUtils = new VoiceUtils(this);
@@ -53,26 +55,29 @@ export class Player extends PlayerEventsEmitter<PlayerEvents> {
 
     /**
      * Creates new Discord Player
-     * @param {Client} client The Discord Client
-     * @param {PlayerInitOptions} [options] The player init options
+     * @param client The Discord Client
+     * @param options The player init options
      */
-    public constructor(client: Client, options: PlayerInitOptions = {}) {
+    public constructor(client: ClientLike, options: PlayerInitOptions = {}) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (!options.ignoreInstance && kSingleton in Player) return (<any>Player)[kSingleton] as Player;
 
         super(['error']);
 
+        const clientResolved = client instanceof DiscordJsClient ? client : isDJSClient(client) ? new DiscordJsClient(client) : client instanceof DiscordClient ? client : null;
+
+        if (!clientResolved) throw Exceptions.ERR_INVALID_ARG_TYPE('client', 'DiscordClient', `${clientResolved}`);
+
         /**
          * The discord.js client
-         * @type {Client}
          */
-        this.client = client;
+        this.client = clientResolved;
 
-        const ibf = this.client.options.intents instanceof IntentsBitField ? this.client.options.intents : new IntentsBitField(this.client.options.intents);
+        // const ibf = this.client.options.intents instanceof IntentsBitField ? this.client.options.intents : new IntentsBitField(this.client.options.intents);
 
-        if (!ibf.has(IntentsBitField.Flags.GuildVoiceStates)) {
-            Util.warn('client is missing "GuildVoiceStates" intent', 'InvalidIntentsBitField');
-        }
+        // if (!ibf.has(IntentsBitField.Flags.GuildVoiceStates)) {
+        //     Util.warn('client is missing "GuildVoiceStates" intent', 'InvalidIntentsBitField');
+        // }
 
         this.options = {
             lockVoiceStateHandler: false,
