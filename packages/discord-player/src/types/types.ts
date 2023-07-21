@@ -7,6 +7,7 @@ import { QueryCache } from '../utils/QueryCache';
 
 // @ts-ignore
 import type { BridgeProvider } from '@discord-player/extractor';
+import { VoiceWorkerManagerInit } from '../VoiceInterface/VoiceManager';
 
 export type FiltersName = keyof QueueFilters;
 
@@ -350,6 +351,7 @@ export interface PlaylistJSON {
  * @property {boolean} [ignoreInstance] Ignore player instance
  * @property {boolean} [useLegacyFFmpeg] Use legacy version of ffmpeg
  * @property {BridgeProvider} [bridgeProvider] Set bridge provider
+ * @property {VoiceWorkerManagerInit} [voiceWorkerOptions] Voice worker manager options
  */
 export interface PlayerInitOptions {
     ytdlOptions?: downloadOptions;
@@ -362,4 +364,5 @@ export interface PlayerInitOptions {
     ignoreInstance?: boolean;
     useLegacyFFmpeg?: boolean;
     bridgeProvider?: BridgeProvider;
+    voiceWorkerOptions?: VoiceWorkerManagerInit;
 }

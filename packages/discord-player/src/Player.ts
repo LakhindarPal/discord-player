@@ -2,7 +2,6 @@ import { FFmpeg } from '@discord-player/ffmpeg';
 import { Client, SnowflakeUtil, VoiceState, IntentsBitField, User, GuildVoiceChannelResolvable, version as djsVersion } from 'discord.js';
 import { Playlist, Track, SearchResult } from './fabric';
 import { GuildQueueEvents, VoiceConnectConfig, GuildNodeCreateOptions, GuildNodeManager, GuildQueue, ResourcePlayOptions, GuildQueueEvent } from './manager';
-import { VoiceUtils } from './VoiceInterface/VoiceUtils';
 import { PlayerEvents, QueryType, SearchOptions, PlayerInitOptions, PlaylistInitData, SearchQueryType } from './types/types';
 import { QueryResolver } from './utils/QueryResolver';
 import { Util } from './utils/Util';
@@ -14,6 +13,7 @@ import { QueryCache } from './utils/QueryCache';
 import { PlayerEventsEmitter } from './utils/PlayerEventsEmitter';
 import { Exceptions } from './errors';
 import { defaultVoiceStateHandler } from './DefaultVoiceStateHandler';
+import { VoiceWorkerManager } from './VoiceInterface/VoiceManager';
 
 const kSingleton = Symbol('InstanceDiscordPlayerSingleton');
 
@@ -48,7 +48,7 @@ export class Player extends PlayerEventsEmitter<PlayerEvents> {
     public readonly client!: Client;
     public readonly options!: PlayerInitOptions;
     public nodes = new GuildNodeManager(this);
-    public readonly voiceUtils = new VoiceUtils(this);
+    public readonly manager = new VoiceWorkerManager(this, this.options.voiceWorkerOptions);
     public extractors = new ExtractorExecutionContext(this);
     public events = new PlayerEventsEmitter<GuildQueueEvents>(['error', 'playerError']);
 

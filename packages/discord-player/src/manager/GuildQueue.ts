@@ -3,8 +3,7 @@ import { ChannelType, Guild, GuildVoiceChannelResolvable, VoiceBasedChannel, Voi
 import { Collection, Queue, QueueStrategy } from '@discord-player/utils';
 import { BiquadFilters, EqualizerBand, PCMFilters } from '@discord-player/equalizer';
 import { Track, TrackResolvable } from '../fabric/Track';
-import { StreamDispatcher } from '../VoiceInterface/StreamDispatcher';
-import { type AudioPlayer, AudioResource, StreamType, VoiceConnection, VoiceConnectionStatus } from '@discordjs/voice';
+import { type AudioPlayer, AudioResource, StreamType, VoiceConnection } from '@discordjs/voice';
 import { Util, VALIDATE_QUEUE_CAP } from '../utils/Util';
 import { Playlist } from '../fabric/Playlist';
 import { GuildQueueHistory } from './GuildQueueHistory';
@@ -17,6 +16,8 @@ import { GuildQueueStatistics } from './GuildQueueStatistics';
 import { TypeUtil } from '../utils/TypeUtil';
 import { AsyncQueue } from '../utils/AsyncQueue';
 import { Exceptions } from '../errors';
+import { ParentOp, ParentPayload } from '../VoiceInterface/constants';
+import { VoiceReceiverNode } from './VoiceReceiverNode';
 
 export interface GuildNodeInit<Meta = unknown> {
     guild: Guild;
@@ -358,7 +359,6 @@ export class GuildQueue<Meta = unknown> {
     private __current: Track | null = null;
     public tracks: Queue<Track>;
     public history = new GuildQueueHistory<Meta>(this);
-    public dispatcher: StreamDispatcher | null = null;
     public node = new GuildQueuePlayerNode<Meta>(this);
     public filters = new GuildQueueAudioFilters<Meta>(this);
     public onBeforeCreateStream: OnBeforeCreateStreamHandler = async () => null;
@@ -370,6 +370,7 @@ export class GuildQueue<Meta = unknown> {
     public timeouts = new Collection<string, NodeJS.Timeout>();
     public stats = new GuildQueueStatistics<Meta>(this);
     public tasksQueue = new AsyncQueue();
+    public worker = this.player.manager.spawn();
 
     public constructor(public player: Player, public options: GuildNodeInit<Meta>) {
         this.tracks = new Queue<Track>(options.queueStrategy);
@@ -434,7 +435,7 @@ export class GuildQueue<Meta = unknown> {
      * The voice receiver for this queue
      */
     public get voiceReceiver() {
-        return this.dispatcher?.receiver ?? null;
+        return null as VoiceReceiverNode | null;
     }
 
     /**
@@ -468,7 +469,7 @@ export class GuildQueue<Meta = unknown> {
      * Indicates current track of this queue
      */
     public get currentTrack() {
-        return this.dispatcher?.audioResource?.metadata || this.__current;
+        return this.__current;
     }
 
     /**
@@ -482,16 +483,14 @@ export class GuildQueue<Meta = unknown> {
      * The voice channel of this queue
      */
     public get channel() {
-        return this.dispatcher?.channel || null;
+        return this.channel || null;
     }
 
     public set channel(c: VoiceBasedChannel | null) {
-        if (this.dispatcher) {
-            if (c) {
-                this.dispatcher.channel = c;
-            } else {
-                this.delete();
-            }
+        if (c) {
+            // this.channel = c;
+        } else {
+            this.delete();
         }
     }
 
@@ -499,7 +498,7 @@ export class GuildQueue<Meta = unknown> {
      * The voice connection of this queue
      */
     public get connection() {
-        return this.dispatcher?.voiceConnection || null;
+        return null as VoiceConnection | null;
     }
 
     /**
@@ -644,7 +643,8 @@ export class GuildQueue<Meta = unknown> {
      * Check if this queue currently holds active audio resource
      */
     public isPlaying() {
-        return this.dispatcher?.audioResource != null && !this.dispatcher.audioResource.ended;
+        // return this.dispatcher?.audioResource != null && !this.dispatcher.audioResource.ended;
+        return false;
     }
 
     /**
@@ -711,28 +711,6 @@ export class GuildQueue<Meta = unknown> {
     }
 
     /**
-     * Create stream dispatcher from the given connection
-     * @param connection The connection to use
-     */
-    public createDispatcher(connection: VoiceConnection, options: Pick<VoiceConnectConfig, 'audioPlayer' | 'timeout'> = {}) {
-        if (connection.state.status === VoiceConnectionStatus.Destroyed) {
-            throw Exceptions.ERR_VOICE_CONNECTION_DESTROYED();
-        }
-
-        const channel = this.player.client.channels.cache.get(connection.joinConfig.channelId!);
-        if (!channel) throw Exceptions.ERR_NO_VOICE_CHANNEL();
-        if (!channel.isVoiceBased()) throw Exceptions.ERR_INVALID_ARG_TYPE('channel', `VoiceBasedChannel (type ${ChannelType.GuildVoice}/${ChannelType.GuildStageVoice})`, String(channel?.type));
-
-        if (this.dispatcher) {
-            this.#removeListeners(this.dispatcher);
-            this.dispatcher.destroy();
-            this.dispatcher = null;
-        }
-
-        this.dispatcher = new StreamDispatcher(connection, channel, this, options.timeout ?? this.options.connectionTimeout, options.audioPlayer);
-    }
-
-    /**
      * Connect to a voice channel
      * @param channelResolvable The voice channel to connect to
      * @param options Join config
@@ -745,19 +723,16 @@ export class GuildQueue<Meta = unknown> {
 
         if (this.hasDebugger) this.debug(`Connecting to ${channel.type === ChannelType.GuildStageVoice ? 'stage' : 'voice'} channel ${channel.name} (ID: ${channel.id})`);
 
-        if (this.dispatcher && channel.id !== this.dispatcher.channel.id) {
-            if (this.hasDebugger) this.debug('Destroying old connection');
-            this.#removeListeners(this.dispatcher);
-            this.dispatcher.destroy();
-            this.dispatcher = null;
-        }
-
-        this.dispatcher = await this.player.voiceUtils.connect(channel, {
-            deaf: options.deaf ?? this.options.selfDeaf ?? true,
-            maxTime: options?.timeout ?? this.options.connectionTimeout ?? 120_000,
-            queue: this,
-            audioPlayer: options?.audioPlayer,
-            group: options.group
+        this.player.manager.send({
+            id: this.worker.threadId,
+            op: ParentOp.JoinVoiceChannel,
+            d: {
+                deaf: options.deaf ?? this.options.selfDeaf ?? true,
+                maxTime: options?.timeout ?? this.options.connectionTimeout ?? 120_000,
+                queue: this,
+                audioPlayer: options?.audioPlayer,
+                group: options.group
+            }
         });
 
         this.emit(GuildQueueEvent.connection, this);
@@ -767,8 +742,6 @@ export class GuildQueue<Meta = unknown> {
                 return await this.channel!.guild.members.me!.voice.setRequestToSpeak(true).catch(Util.noop);
             });
         }
-
-        this.#attachListeners(this.dispatcher);
 
         return this;
     }
@@ -843,38 +816,49 @@ export class GuildQueue<Meta = unknown> {
         return this.player.events.emit(event, ...args);
     }
 
-    #attachListeners(dispatcher: StreamDispatcher) {
-        dispatcher.on('error', (e) => this.emit(GuildQueueEvent.error, this, e));
-        dispatcher.on('debug', (m) => this.hasDebugger && this.emit(GuildQueueEvent.debug, this, m));
-        dispatcher.on('finish', (r) => this.#performFinish(r));
-        dispatcher.on('start', (r) => this.#performStart(r));
-        dispatcher.on('destroyed', () => {
-            this.#removeListeners(dispatcher);
-            this.dispatcher = null;
-        });
-        dispatcher.on('dsp', (f) => {
-            if (!Object.is(this.filters._lastFiltersCache.filters, f)) {
-                this.emit(GuildQueueEvent.dspUpdate, this, this.filters._lastFiltersCache.filters, f);
-            }
-            this.filters._lastFiltersCache.filters = f;
-        });
-        dispatcher.on('biquad', (f) => {
-            if (this.filters._lastFiltersCache.biquad !== f) {
-                this.emit(GuildQueueEvent.biquadFiltersUpdate, this, this.filters._lastFiltersCache.biquad, f);
-            }
-            this.filters._lastFiltersCache.biquad = f;
-        });
-        dispatcher.on('eqBands', (f) => {
-            if (!Object.is(f, this.filters._lastFiltersCache.equalizer)) {
-                this.emit(GuildQueueEvent.equalizerUpdate, this, this.filters._lastFiltersCache.equalizer, f);
-            }
-            this.filters._lastFiltersCache.equalizer = f;
-        });
-        dispatcher.on('volume', (f) => {
-            if (this.filters._lastFiltersCache.volume !== f) this.emit(GuildQueueEvent.volumeChange, this, this.filters._lastFiltersCache.volume, f);
-            this.filters._lastFiltersCache.volume = f;
+    /**
+     * Send a payload to the player node
+     * @param payload The payload to send
+     */
+    public send(payload: ParentPayload) {
+        return this.player.manager.send({
+            ...payload,
+            queue: this.id,
+            id: this.worker.threadId
         });
     }
+
+    // #attachListeners(dispatcher: StreamDispatcher) {
+    //     dispatcher.on('error', (e) => this.emit(GuildQueueEvent.error, this, e));
+    //     dispatcher.on('debug', (m) => this.hasDebugger && this.emit(GuildQueueEvent.debug, this, m));
+    //     dispatcher.on('finish', (r) => this.#performFinish(r));
+    //     dispatcher.on('start', (r) => this.#performStart(r));
+    //     dispatcher.on('destroyed', () => {
+    //         this.#removeListeners(dispatcher);
+    //     });
+    //     dispatcher.on('dsp', (f) => {
+    //         if (!Object.is(this.filters._lastFiltersCache.filters, f)) {
+    //             this.emit(GuildQueueEvent.dspUpdate, this, this.filters._lastFiltersCache.filters, f);
+    //         }
+    //         this.filters._lastFiltersCache.filters = f;
+    //     });
+    //     dispatcher.on('biquad', (f) => {
+    //         if (this.filters._lastFiltersCache.biquad !== f) {
+    //             this.emit(GuildQueueEvent.biquadFiltersUpdate, this, this.filters._lastFiltersCache.biquad, f);
+    //         }
+    //         this.filters._lastFiltersCache.biquad = f;
+    //     });
+    //     dispatcher.on('eqBands', (f) => {
+    //         if (!Object.is(f, this.filters._lastFiltersCache.equalizer)) {
+    //             this.emit(GuildQueueEvent.equalizerUpdate, this, this.filters._lastFiltersCache.equalizer, f);
+    //         }
+    //         this.filters._lastFiltersCache.equalizer = f;
+    //     });
+    //     dispatcher.on('volume', (f) => {
+    //         if (this.filters._lastFiltersCache.volume !== f) this.emit(GuildQueueEvent.volumeChange, this, this.filters._lastFiltersCache.volume, f);
+    //         this.filters._lastFiltersCache.volume = f;
+    //     });
+    // }
 
     public get hasDebugger() {
         return this.player.events.listenerCount(GuildQueueEvent.debug) > 0;
@@ -954,7 +938,13 @@ export class GuildQueue<Meta = unknown> {
         if (this.options.leaveOnEnd) {
             const tm: NodeJS.Timeout = setTimeout(() => {
                 if (this.isPlaying()) return clearTimeout(tm);
-                this.dispatcher?.disconnect();
+                this.player.manager.send({
+                    id: this.worker.threadId,
+                    op: ParentOp.Destroy,
+                    d: {
+                        id: this.id
+                    }
+                });
             }, this.options.leaveOnEndCooldown).unref();
         }
     }

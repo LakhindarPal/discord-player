@@ -1,15 +1,14 @@
-import { AudioResource, StreamType } from '@discordjs/voice';
 import { Readable } from 'stream';
 import { PlayerProgressbarOptions, SearchQueryType } from '../types/types';
 import { QueryResolver } from '../utils/QueryResolver';
 import { Util, VALIDATE_QUEUE_CAP } from '../utils/Util';
 import { Track, TrackResolvable } from '../fabric/Track';
 import { GuildQueue, GuildQueueEvent } from './GuildQueue';
-import { setTimeout as waitFor } from 'timers/promises';
 import { AsyncQueue } from '../utils/AsyncQueue';
 import { Exceptions } from '../errors';
 import { TypeUtil } from '../utils/TypeUtil';
 import { CreateStreamOps } from '../VoiceInterface/StreamDispatcher';
+import { ParentOp } from '../VoiceInterface/constants';
 
 export const FFMPEG_SRATE_REGEX = /asetrate=\d+\*(\d(\.\d)?)/;
 
@@ -45,28 +44,28 @@ export class GuildQueuePlayerNode<Meta = unknown> {
      * If the player is currently in idle mode
      */
     public isIdle() {
-        return !!this.queue.dispatcher?.isIdle();
+        return this.queue.stats.state.status.idle;
     }
 
     /**
      * If the player is currently buffering the track
      */
     public isBuffering() {
-        return !!this.queue.dispatcher?.isBuffering();
+        return this.queue.stats.state.status.buffering;
     }
 
     /**
      * If the player is currently playing a track
      */
     public isPlaying() {
-        return !!this.queue.dispatcher?.isPlaying();
+        return this.queue.stats.state.status.playing;
     }
 
     /**
      * If the player is currently paused
      */
     public isPaused() {
-        return !!this.queue.dispatcher?.isPaused();
+        return this.queue.stats.state.status.paused;
     }
 
     /**
@@ -87,7 +86,7 @@ export class GuildQueuePlayerNode<Meta = unknown> {
      * The stream time for current session
      */
     public get streamTime() {
-        return this.queue.dispatcher?.streamTime ?? 0;
+        return this.queue.stats.state.progress ?? 0;
     }
 
     /**
@@ -218,7 +217,7 @@ export class GuildQueuePlayerNode<Meta = unknown> {
      * Current volume
      */
     public get volume() {
-        return this.queue.dispatcher?.volume ?? 100;
+        return this.queue.stats.state.volume;
     }
 
     /**
@@ -226,8 +225,14 @@ export class GuildQueuePlayerNode<Meta = unknown> {
      * @param vol Volume amount to set
      */
     public setVolume(vol: number) {
-        if (!this.queue.dispatcher) return false;
-        const res = this.queue.dispatcher.setVolume(vol);
+        const res = this.queue.player.manager.send({
+            id: this.queue.worker.threadId,
+            op: ParentOp.SetVolume,
+            d: {
+                volume: vol
+            }
+        });
+
         if (res) this.queue.filters._lastFiltersCache.volume = vol;
         return res;
     }
@@ -237,7 +242,13 @@ export class GuildQueuePlayerNode<Meta = unknown> {
      * @param rate The bit rate to set
      */
     public setBitrate(rate: number | 'auto') {
-        this.queue.dispatcher?.audioResource?.encoder?.setBitrate(rate === 'auto' ? this.queue.channel?.bitrate ?? 64000 : rate);
+        this.queue.player.manager.send({
+            id: this.queue.worker.threadId,
+            op: ParentOp.SetBitrate,
+            d: {
+                rate: rate === 'auto' ? this.queue.channel?.bitrate ?? 64000 : rate
+            }
+        });
     }
 
     /**
@@ -245,8 +256,13 @@ export class GuildQueuePlayerNode<Meta = unknown> {
      * @param state The state
      */
     public setPaused(state: boolean) {
-        if (state) return this.queue.dispatcher?.pause(true) || false;
-        return this.queue.dispatcher?.resume() || false;
+        this.queue.player.manager.send({
+            id: this.queue.worker.threadId,
+            op: ParentOp.SetPaused,
+            d: {
+                state
+            }
+        });
     }
 
     /**
@@ -267,9 +283,12 @@ export class GuildQueuePlayerNode<Meta = unknown> {
      * Skip current track
      */
     public skip() {
-        if (!this.queue.dispatcher) return false;
         this.queue.setTransitioning(false);
-        this.queue.dispatcher.end();
+        this.queue.player.manager.send({
+            id: this.queue.worker.threadId,
+            op: ParentOp.SkipTrack,
+            d: {}
+        });
         return true;
     }
 
@@ -398,28 +417,39 @@ export class GuildQueuePlayerNode<Meta = unknown> {
     public stop(force = false) {
         this.queue.tracks.clear();
         this.queue.history.clear();
-        if (!this.queue.dispatcher) return false;
-        this.queue.dispatcher.end();
+
+        this.queue.send({
+            op: ParentOp.Stop,
+            d: {}
+        });
+
         if (force) {
-            this.queue.dispatcher.destroy();
+            this.queue.send({
+                op: ParentOp.Destroy,
+                d: {}
+            });
+
             return true;
         }
         if (this.queue.options.leaveOnStop) {
             const tm: NodeJS.Timeout = setTimeout(() => {
                 if (this.isPlaying() || this.queue.tracks.size) return clearTimeout(tm);
-                this.queue.dispatcher?.destroy();
+                this.queue.send({
+                    op: ParentOp.Destroy,
+                    d: {}
+                });
             }, this.queue.options.leaveOnStopCooldown).unref();
         }
         return true;
     }
 
-    /**
-     * Play raw audio resource
-     * @param resource The audio resource to play
-     */
-    public async playRaw(resource: AudioResource) {
-        await this.queue.dispatcher?.playStream(resource as AudioResource<Track>);
-    }
+    // /**
+    //  * Play raw audio resource
+    //  * @param resource The audio resource to play
+    //  */
+    // public async playRaw(resource: AudioResource) {
+    //     await this.queue.dispatcher?.playStream(resource as AudioResource<Track>);
+    // }
 
     /**
      * Play the given track
@@ -427,10 +457,6 @@ export class GuildQueuePlayerNode<Meta = unknown> {
      * @param options Options for playing the track
      */
     public async play(res?: Track | null, options?: ResourcePlayOptions) {
-        if (!this.queue.dispatcher?.voiceConnection) {
-            throw Exceptions.ERR_NO_VOICE_CONNECTION();
-        }
-
         if (this.queue.hasDebugger) this.queue.debug(`Received play request from guild ${this.queue.guild.name} (ID: ${this.queue.guild.id})`);
 
         options = Object.assign(
@@ -509,7 +535,7 @@ export class GuildQueuePlayerNode<Meta = unknown> {
             }
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const cookies = track.raw?.source === 'youtube' ? (<any>this.queue.player.options.ytdlOptions?.requestOptions)?.headers?.cookie : undefined;
+            // const cookies = track.raw?.source === 'youtube' ? (<any>this.queue.player.options.ytdlOptions?.requestOptions)?.headers?.cookie : undefined;
             const createStreamConfig = {
                 disableBiquad: this.queue.options.biquad === false,
                 disableEqualizer: this.queue.options.equalizer === false,
@@ -521,8 +547,8 @@ export class GuildQueuePlayerNode<Meta = unknown> {
                 eq: this.queue.filters._lastFiltersCache.equalizer,
                 defaultFilters: this.queue.filters._lastFiltersCache.filters,
                 volume: this.queue.filters._lastFiltersCache.volume,
-                data: track,
-                type: StreamType.Raw
+                data: track
+                // type: StreamType.Raw
             };
 
             const trackStreamConfig: StreamConfig = {
@@ -540,21 +566,16 @@ export class GuildQueuePlayerNode<Meta = unknown> {
 
             await donePromise;
 
-            const pcmStream = this.#createFFmpegStream(streamSrc.stream, track, options.seek ?? 0, cookies);
-
-            if (options.transitionMode) {
-                if (this.queue.hasDebugger) this.queue.debug(`Transition mode detected, player will wait for buffering timeout to expire (Timeout: ${this.queue.options.bufferingTimeout}ms)`);
-                await waitFor(this.queue.options.bufferingTimeout);
-                if (this.queue.hasDebugger) this.queue.debug('Buffering timeout has expired!');
-            }
-
-            if (this.queue.hasDebugger) this.queue.debug(`Preparing final stream config: ${JSON.stringify(trackStreamConfig, null, 2)}`);
-
-            const resource = await this.queue.dispatcher.createStream(pcmStream, createStreamConfig);
-
             this.queue.setTransitioning(!!options.transitionMode);
 
-            await this.#performPlay(resource);
+            this.queue.send({
+                op: ParentOp.Play,
+                d: {
+                    stream: streamSrc.stream,
+                    trackId: track.id,
+                    seek: options.seek ?? 0
+                }
+            });
         } catch (e) {
             if (this.queue.hasDebugger) this.queue.debug(`Failed to initialize audio player: ${e}`);
             throw e;
@@ -576,12 +597,6 @@ export class GuildQueuePlayerNode<Meta = unknown> {
         }
 
         throw streamDefinitelyFailedMyDearT_TPleaseTrustMeItsNotMyFault;
-    }
-
-    async #performPlay(resource: AudioResource<Track>) {
-        if (this.queue.hasDebugger) this.queue.debug('Initializing audio player...');
-        await this.queue.dispatcher!.playStream(resource);
-        if (this.queue.hasDebugger) this.queue.debug('Dispatching audio...');
     }
 
     async #createGenericStream(track: Track) {
