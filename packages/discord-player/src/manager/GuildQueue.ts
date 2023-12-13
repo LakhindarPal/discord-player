@@ -51,6 +51,9 @@ export interface GuildNodeInit<Meta = unknown> {
     disableFilterer: boolean;
     disableBiquad: boolean;
     disableResampler: boolean;
+    dedupeThreshold: number;
+    dedupeParallel: boolean;
+    dedupeParallelChunkSize: number;
 }
 
 export interface VoiceConnectConfig {
@@ -405,6 +408,9 @@ export class GuildQueue<Meta = unknown> {
         if (TypeUtil.isFunction(options.onBeforeCreateStream)) this.onBeforeCreateStream = options.onBeforeCreateStream;
         if (TypeUtil.isFunction(options.onAfterCreateStream)) this.onAfterCreateStream = options.onAfterCreateStream;
         if (!TypeUtil.isNullish(options.repeatMode)) this.repeatMode = options.repeatMode;
+        if (options.dedupeThreshold < 0 || options.dedupeThreshold > 1) {
+            throw Exceptions.ERR_OUT_OF_RANGE('dedupeThreshold', `${options.dedupeThreshold}`, '0', '1');
+        }
 
         options.selfDeaf ??= true;
         options.maxSize ??= Infinity;
@@ -919,6 +925,17 @@ export class GuildQueue<Meta = unknown> {
         return this.player.events.emit(event, ...args);
     }
 
+    /**
+     * Remove possibly duplicate tracks from the queue. This method can be expensive for large queues, so this should be used only when necessary.
+     * If API key was provided while initializing the player, this method will use external API to dedupe the queue.
+     * @param track The track to dedupe. If not provided, discord-player will try to dedupe the entire queue.
+     * @returns The number of tracks removed
+     */
+    public async purge(track?: Track) {
+        if (this.options.dedupeThreshold < 1) return 0;
+        return this.#performDedupe(track);
+    }
+
     #attachListeners(dispatcher: StreamDispatcher) {
         dispatcher.on('error', (e) => this.emit(GuildQueueEvent.error, this, e));
         dispatcher.on('debug', (m) => this.hasDebugger && this.emit(GuildQueueEvent.debug, this, m));
@@ -1106,5 +1123,110 @@ export class GuildQueue<Meta = unknown> {
         } catch {
             return this.#emitEnd();
         }
+    }
+
+    async #performDedupe(input?: Track) {
+        if (!this.player.api) return this.#performSimpleDedupe(input);
+        const tracks = this.tracks.store;
+        if (!tracks.length) return 0;
+
+        const result: Track[] = [];
+
+        let removedCount = 0;
+
+        if (!input) {
+            try {
+                if (!this.options.dedupeParallel || tracks.length <= this.options.dedupeParallelChunkSize) {
+                    const res = await this.#dedupeInner(tracks, 0);
+                    result.push(...res.tracks);
+                    removedCount += res.removedCount;
+                } else {
+                    let sid = 0;
+                    const chunkSize = this.options.dedupeParallelChunkSize;
+                    const promises: Promise<{
+                        tracks: Track<unknown>[];
+                        removedCount: number;
+                        sid: number;
+                    }>[] = [];
+
+                    const len = tracks.length;
+
+                    for (let i = 0; i < len; i += chunkSize) {
+                        // analyze in chunks
+                        promises.push(this.#dedupeInner(tracks.slice(i, Math.min(i + chunkSize, len)), sid++));
+                    }
+
+                    const results = await Promise.all(promises);
+
+                    this.tracks.store = results
+                        .sort((a, b) => a.sid - b.sid)
+                        .flatMap((result) => {
+                            removedCount += result.removedCount;
+                            return result.tracks;
+                        });
+                }
+            } catch {
+                this.#performSimpleDedupe();
+            }
+        } else {
+            // analyzing entire queue via api is very expensive task
+            return this.#performSimpleDedupe();
+        }
+
+        this.tracks.store = result;
+
+        return removedCount;
+    }
+
+    #performSimpleDedupe(input?: Track) {
+        const set = new Set<string>(input ? [input.url] : this.tracks.store.map((t) => t.url));
+
+        const tracks = this.tracks.store.filter((t) => {
+            if (set.has(t.url)) {
+                set.delete(t.url);
+                return true;
+            }
+
+            return false;
+        });
+
+        const removedCount = this.tracks.store.length - tracks.length;
+
+        this.tracks.store = tracks;
+
+        return removedCount;
+    }
+
+    async #dedupeInner(tracks: Track[], sid: number): Promise<{ tracks: Track[]; removedCount: number; sid: number }> {
+        let result: Track[] = [];
+        let removedCount = 0;
+
+        if (tracks.length) {
+            const [source, ...rest] = tracks;
+
+            const res = await this.player.api!.findSimilarity({
+                source: {
+                    id: source.id,
+                    value: source.title
+                },
+                target: rest.map((t) => ({
+                    id: t.id,
+                    value: t.title
+                }))
+            });
+
+            result = res.result
+                .filter((res) => res.score >= this.options.dedupeThreshold)
+                .map((res) => {
+                    const track = this.tracks.find((t) => t.id === res.source.id)!;
+                    if (!track) return null;
+                    return track;
+                })
+                .filter(Boolean) as Track[];
+
+            removedCount = res.result.length - result.length;
+        }
+
+        return { tracks: result, removedCount, sid };
     }
 }

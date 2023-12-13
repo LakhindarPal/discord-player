@@ -3,7 +3,7 @@ import { Client, SnowflakeUtil, VoiceState, IntentsBitField, User, GuildVoiceCha
 import { Playlist, Track, SearchResult } from './fabric';
 import { GuildQueueEvents, VoiceConnectConfig, GuildNodeCreateOptions, GuildNodeManager, GuildQueue, ResourcePlayOptions, GuildQueueEvent } from './manager';
 import { VoiceUtils } from './VoiceInterface/VoiceUtils';
-import { PlayerEvents, QueryType, SearchOptions, PlayerInitOptions, PlaylistInitData, SearchQueryType } from './types/types';
+import { PlayerEvents, QueryType, SearchOptions, PlayerInitOptions, PlaylistInitData, SearchQueryType, TrackConstructable } from './types/types';
 import { QueryResolver, ResolvedQuery } from './utils/QueryResolver';
 import { Util } from './utils/Util';
 import { generateDependencyReport, version as dVoiceVersion } from 'discord-voip';
@@ -15,6 +15,8 @@ import { PlayerEventsEmitter } from './utils/PlayerEventsEmitter';
 import { Exceptions } from './errors';
 import { defaultVoiceStateHandler } from './DefaultVoiceStateHandler';
 import { IPRotator } from './utils/IPRotator';
+import { deserialize, isSerializedPlaylist, isSerializedTrack } from './utils/serde';
+import { DiscordPlayerAPI } from './utils/API';
 
 const kSingleton = Symbol('InstanceDiscordPlayerSingleton');
 
@@ -25,7 +27,7 @@ export interface PlayerNodeInitializationResult<T = unknown> {
     queue: GuildQueue<T>;
 }
 
-export type TrackLike = string | Track | SearchResult | Track[] | Playlist;
+export type TrackLike = TrackConstructable;
 
 export interface PlayerNodeInitializerOptions<T> extends SearchOptions {
     nodeOptions?: GuildNodeCreateOptions<T>;
@@ -53,6 +55,7 @@ export class Player extends PlayerEventsEmitter<PlayerEvents> {
     public extractors = new ExtractorExecutionContext(this);
     public events = new PlayerEventsEmitter<GuildQueueEvents>(['error', 'playerError']);
     public routePlanner: IPRotator | null = null;
+    public api: DiscordPlayerAPI | null = null;
 
     /**
      * Creates new Discord Player
@@ -87,12 +90,17 @@ export class Player extends PlayerEventsEmitter<PlayerEvents> {
             useLegacyFFmpeg: false,
             skipFFmpeg: true,
             probeTimeout: 5000,
+            apiKey: null,
             ...options,
             ytdlOptions: {
                 highWaterMark: 1 << 25,
                 ...options.ytdlOptions
             }
         } as PlayerInitOptions;
+
+        if (this.options.apiKey) {
+            this.api = new DiscordPlayerAPI(this);
+        }
 
         this.client.on('voiceStateUpdate', this.#voiceStateUpdateListener);
 
@@ -355,7 +363,7 @@ export class Player extends PlayerEventsEmitter<PlayerEvents> {
 
     /**
      * Search tracks
-     * @param {string | Track | Track[] | Playlist | SearchResult} query The search query
+     * @param {TrackConstructable} query The search query
      * @param {SearchOptions} options The search options
      * @returns {Promise<SearchResult>}
      * @example ```typescript
@@ -365,12 +373,16 @@ export class Player extends PlayerEventsEmitter<PlayerEvents> {
      * console.log(result); // Logs `SearchResult` object
      * ```
      */
-    public async search(searchQuery: string | Track | Track[] | Playlist | SearchResult, options: SearchOptions = {}): Promise<SearchResult> {
+    public async search(searchQuery: TrackConstructable, options: SearchOptions = {}): Promise<SearchResult> {
         if (searchQuery instanceof SearchResult) return searchQuery;
 
         if (options.requestedBy != null) options.requestedBy = this.client.users.resolve(options.requestedBy)!;
         options.blockExtractors ??= this.options.blockExtractors;
         options.fallbackSearchEngine ??= QueryType.AUTO_SEARCH;
+
+        if (isSerializedPlaylist(searchQuery) || isSerializedTrack(searchQuery)) {
+            searchQuery = deserialize(this, searchQuery);
+        }
 
         if (searchQuery instanceof Track) {
             return new SearchResult(this, {
@@ -610,7 +622,20 @@ export class Player extends PlayerEventsEmitter<PlayerEvents> {
      * Creates `Playlist` instance
      * @param data The data to initialize a playlist
      */
-    public createPlaylist(data: PlaylistInitData) {
-        return new Playlist(this, data);
+    public createPlaylist(data: Partial<PlaylistInitData>) {
+        const init: PlaylistInitData = {
+            author: { name: '', url: '' },
+            description: '',
+            id: '',
+            source: 'arbitrary',
+            thumbnail: '',
+            title: '',
+            tracks: [],
+            type: 'playlist',
+            url: '',
+            ...data
+        };
+
+        return new Playlist(this, init);
     }
 }

@@ -131,6 +131,13 @@ const DiscordPlayerErrors = {
         createError(target: string, message?: string) {
             return `[${this.name}] ` + `Illegal invocation of ${target} hook.${message ? ` ${message}` : ''}`;
         }
+    },
+    ERR_INVALID_API_KEY: {
+        name: 'ERR_INVALID_API_KEY',
+        type: Error,
+        createError() {
+            return `[${this.name}] ` + 'No API key provided';
+        }
     }
 } as const;
 

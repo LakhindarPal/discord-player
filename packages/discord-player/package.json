@@ -55,7 +55,8 @@
     "@discord-player/utils": "workspace:^",
     "discord-voip": "^0.1.3",
     "ip": "^1.1.8",
-    "libsodium-wrappers": "^0.7.10"
+    "libsodium-wrappers": "^0.7.10",
+    "nxrouter": "^1.0.0"
   },
   "peerDependencies": {
     "@discord-player/extractor": "workspace:^"

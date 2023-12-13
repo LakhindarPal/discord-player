@@ -1,13 +1,14 @@
 import type { User, UserResolvable, VoiceState } from 'discord.js';
 import type { GuildQueue } from '../manager';
-import type { Track } from '../fabric/Track';
-import type { Playlist } from '../fabric/Playlist';
+import type { SerializedTrack, Track } from '../fabric/Track';
+import type { Playlist, SerializedPlaylist } from '../fabric/Playlist';
 import type { downloadOptions } from 'ytdl-core';
 import type { QueryCacheProvider } from '../utils/QueryCache';
 import type { IPRotationConfig } from '../utils/IPRotator';
 
 // @ts-ignore
 import type { BridgeProvider } from '@discord-player/extractor';
+import { SearchResult } from '../fabric';
 
 export type FiltersName = keyof QueueFilters;
 
@@ -498,7 +499,7 @@ export interface PlayerInitOptions {
      * Query cache provider
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    queryCache?: QueryCacheProvider<any> | null;
+    queryCache?: QueryCacheProvider | null;
     /**
      * Ignore player instance
      */
@@ -523,4 +524,10 @@ export interface PlayerInitOptions {
      * The probe timeout in milliseconds. Defaults to 5000.
      */
     probeTimeout?: number;
+    /**
+     * Discord Player API key
+     */
+    apiKey?: string;
 }
+
+export type TrackConstructable = string | Track | Track[] | Playlist | SearchResult | SerializedPlaylist | SerializedTrack;

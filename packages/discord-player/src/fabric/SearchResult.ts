@@ -4,6 +4,7 @@ import { Player } from '../Player';
 import { QueryExtractorSearch, QueryType, SearchQueryType } from '../types/types';
 import { Playlist } from './Playlist';
 import { Track } from './Track';
+import { Util } from '../utils/Util';
 
 export interface SearchResultData {
     query: string;
@@ -143,5 +144,13 @@ export class SearchResult {
             extractor: this.extractor?.identifier || null,
             requestedBy: this.requestedBy?.toJSON() || null
         };
+    }
+
+    /**
+     * Shuffle the tracks in this search result
+     */
+    public shuffle() {
+        this._data.tracks = Util.shuffleArray(this.tracks);
+        return this;
     }
 }

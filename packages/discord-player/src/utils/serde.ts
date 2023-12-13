@@ -12,24 +12,24 @@ export enum SerializedType {
 }
 
 export type Encodable = SerializedTrack | SerializedPlaylist;
+export type SerializedOutput<T extends Track | Playlist> = T extends Track ? SerializedTrack : SerializedPlaylist;
+export type DeserializedOutput<T extends Encodable> = T extends SerializedTrack ? Track : Playlist;
 
-const isTrack = (data: any): data is SerializedTrack => data.$type === SerializedType.Track;
-const isPlaylist = (data: any): data is SerializedPlaylist => data.$type === SerializedType.Playlist;
+export const isSerializedTrack = (data: any): data is SerializedTrack => data.$type === SerializedType.Track;
+export const isSerializedPlaylist = (data: any): data is SerializedPlaylist => data.$type === SerializedType.Playlist;
 
-export function serialize(data: Track | Playlist | any) {
-    if (data instanceof Track) return data.serialize();
-    if (data instanceof Playlist) return data.serialize();
+export type SerializableInput = Track | Playlist;
 
-    try {
-        return data.toJSON();
-    } catch {
-        throw Exceptions.ERR_SERIALIZATION_FAILED();
-    }
+export function serialize<T extends SerializableInput>(data: T): SerializedOutput<T> {
+    if (data instanceof Track) return data.serialize() as any;
+    if (data instanceof Playlist) return data.serialize() as any;
+
+    throw Exceptions.ERR_SERIALIZATION_FAILED();
 }
 
-export function deserialize(player: Player, data: Encodable) {
-    if (isTrack(data)) return Track.fromSerialized(player, data);
-    if (isPlaylist(data)) return Playlist.fromSerialized(player, data);
+export function deserialize<T extends Encodable>(player: Player, data: T): DeserializedOutput<T> {
+    if (isSerializedTrack(data)) return Track.fromSerialized(player, data) as any;
+    if (isSerializedPlaylist(data)) return Playlist.fromSerialized(player, data) as any;
 
     throw Exceptions.ERR_DESERIALIZATION_FAILED();
 }

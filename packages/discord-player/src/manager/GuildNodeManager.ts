@@ -39,6 +39,9 @@ export interface GuildNodeCreateOptions<T = unknown> {
     disableFilterer?: boolean;
     disableBiquad?: boolean;
     disableResampler?: boolean;
+    duplicatesFiltererThreshold?: number;
+    dedupeParallel?: boolean;
+    dedupeParallelChunkSize?: number;
 }
 
 export type NodeResolvable = GuildQueue | GuildResolvable;
@@ -87,6 +90,9 @@ export class GuildNodeManager<Meta = unknown> {
         options.disableFilterer ??= false;
         options.disableVolume ??= false;
         options.disableResampler ??= true;
+        options.duplicatesFiltererThreshold ??= 0.7;
+        options.dedupeParallel ??= true;
+        options.dedupeParallelChunkSize ??= 50;
 
         if (getGlobalRegistry().has('@[onBeforeCreateStream]') && !options.onBeforeCreateStream) {
             options.onBeforeCreateStream = getGlobalRegistry().get('@[onBeforeCreateStream]') as OnBeforeCreateStreamHandler;
@@ -128,7 +134,10 @@ export class GuildNodeManager<Meta = unknown> {
             disableEqualizer: options.disableEqualizer,
             disableFilterer: options.disableFilterer,
             disableResampler: options.disableResampler,
-            disableVolume: options.disableVolume
+            disableVolume: options.disableVolume,
+            dedupeThreshold: options.duplicatesFiltererThreshold,
+            dedupeParallel: options.dedupeParallel,
+            dedupeParallelChunkSize: options.dedupeParallelChunkSize
         });
 
         this.cache.set(server.id, queue);

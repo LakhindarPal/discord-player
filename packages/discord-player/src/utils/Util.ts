@@ -139,9 +139,7 @@ class Util {
         return src[randomInt(src.length)];
     }
 
-    static arrayCloneShuffle<T>(src: T[]): T[] {
-        const arr = src.slice();
-
+    static shuffleArray<T>(arr: T[]): T[] {
         let m = arr.length;
 
         while (m) {
@@ -150,6 +148,10 @@ class Util {
         }
 
         return arr;
+    }
+
+    static arrayCloneShuffle<T>(src: T[]): T[] {
+        return this.shuffleArray(src.slice());
     }
 }
 

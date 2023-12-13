@@ -1,3 +1,5 @@
+import { Readable } from 'stream';
+
 export class TypeUtil {
     private constructor() {
         return TypeUtil;
@@ -30,5 +32,13 @@ export class TypeUtil {
 
     public static isError(t: unknown): t is Error {
         return t instanceof Error;
+    }
+
+    public static isRegex(t: unknown): t is RegExp {
+        return t instanceof RegExp;
+    }
+
+    public static isReadableStream(t: unknown): t is Readable {
+        return t instanceof Readable;
     }
 }

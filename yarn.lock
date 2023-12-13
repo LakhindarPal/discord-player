@@ -4890,6 +4890,7 @@ __metadata:
     discord.js: "npm:^14.1.2"
     ip: "npm:^1.1.8"
     libsodium-wrappers: "npm:^0.7.10"
+    nxrouter: "npm:^1.0.0"
     opusscript: "npm:^0.0.8"
     tsup: "npm:^7.2.0"
     typescript: "npm:^5.2.2"
@@ -9248,6 +9249,13 @@ __metadata:
   dependencies:
     boolbase: "npm:^1.0.0"
   checksum: 5afc3dafcd1573b08877ca8e6148c52abd565f1d06b1eb08caf982e3fa289a82f2cae697ffb55b5021e146d60443f1590a5d6b944844e944714a5b549675bcd3
+  languageName: node
+  linkType: hard
+
+"nxrouter@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "nxrouter@npm:1.0.0"
+  checksum: 7a5f4f813b7c73f2dbf8ac30cbd681414d6346db4adbeab15f3ff063a51b0281268f91573cd27586e4974557f2424c656b8aaddd49944e5cedde66500457bada
   languageName: node
   linkType: hard
 
